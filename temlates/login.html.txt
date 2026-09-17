@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Authentication Lab</title>
+</head>
+
+<body>
+
+<h1>Secure Authentication Lab</h1>
+
+<h2>Login</h2>
+
+<form method="POST" action="/login">
+
+    <label>Username</label>
+    <input
+        type="text"
+        name="username"
+        minlength="3"
+        maxlength="30"
+        required
+    >
+
+    <br><br>
+
+    <label>Password</label>
+    <input
+        type="password"
+        name="password"
+        minlength="12"
+        maxlength="128"
+        required
+    >
+
+    <br><br>
+
+    <button type="submit">Login</button>
+
+</form>
+
+</body>
+</html>
