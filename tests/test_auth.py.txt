@@ -1,0 +1,127 @@
+import os
+import tempfile
+
+import pytest
+
+from app import app, init_db
+
+
+@pytest.fixture
+def client():
+
+    db_fd, db_path = tempfile.mkstemp()
+
+    app.config["TESTING"] = True
+
+    # Use a temporary database for tests
+    import app as application
+    application.DATABASE = db_path
+
+    init_db()
+
+    with app.test_client() as client:
+        yield client
+
+    os.close(db_fd)
+
+    if os.path.exists(db_path):
+        os.unlink(db_path)
+
+
+def register(client, username, password):
+
+    return client.post(
+        "/register",
+        data={
+            "username": username,
+            "password": password
+        }
+    )
+
+
+def login(client, username, password):
+
+    return client.post(
+        "/login",
+        data={
+            "username": username,
+            "password": password
+        },
+        follow_redirects=True
+    )
+
+
+def test_password_is_hashed(client):
+
+    register(client, "testuser", "StrongPassword123!")
+
+    import app as application
+
+    db = application.get_db()
+
+    user = db.execute(
+        "SELECT password_hash FROM users WHERE username = ?",
+        ("testuser",)
+    ).fetchone()
+
+    db.close()
+
+    assert user["password_hash"] != "StrongPassword123!"
+
+
+def test_successful_login(client):
+
+    register(client, "testuser", "StrongPassword123!")
+
+    response = login(
+        client,
+        "testuser",
+        "StrongPassword123!"
+    )
+
+    assert response.status_code == 200
+    assert b"Logged in as testuser" in response.data
+
+
+def test_wrong_password(client):
+
+    register(client, "testuser", "StrongPassword123!")
+
+    response = login(
+        client,
+        "testuser",
+        "WrongPassword123!"
+    )
+
+    assert response.status_code == 401
+    assert b"Invalid username or password" in response.data
+
+
+def test_invalid_password_rejected(client):
+
+    response = register(
+        client,
+        "testuser",
+        "short"
+    )
+
+    assert response.status_code == 400
+
+
+def test_logout(client):
+
+    register(client, "testuser", "StrongPassword123!")
+
+    login(
+        client,
+        "testuser",
+        "StrongPassword123!"
+    )
+
+    response = client.post(
+        "/logout",
+        follow_redirects=True
+    )
+
+    assert response.status_code == 200
+    assert b"Secure Authentication Lab" in response.data
